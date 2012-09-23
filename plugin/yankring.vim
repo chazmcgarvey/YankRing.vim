@@ -446,8 +446,7 @@ function! s:YRShow(...)
 
     " List is shown in order of replacement
     " assuming using previous yanks
-    let output = "--- YankRing ---\n"
-    let output = output . (show_registers == 1 ? 'Reg ' : 'Elem')."  Content\n"
+    let output = (show_registers == 1 ? 'Reg ' : 'Elem')."  Content\n"
 
     if show_registers == 1
         for reg_name in map( range(char2nr('0'), char2nr('9')) +
@@ -667,8 +666,7 @@ function! s:YRSearch(...)
 
     " List is shown in order of replacement
     " assuming using previous yanks
-    let output        = "--- YankRing ---\n"
-    let output        = output . "Elem  Content\n"
+    let output        = "Elem  Content\n"
     let valid_choices = []
 
     let search_result = filter(copy(s:yr_history_list), "v:val =~ '".s:yr_search."'")
@@ -2150,9 +2148,19 @@ function! s:YRWindowUpdate()
 endfunction
 
 " YRWindowStatus
+" Display the modes and command list on the statusline.
+function! s:YRWindowStatus()
+    let status = (g:yankring_window_auto_close==1?"[AC]":"").
+                \ (g:yankring_clipboard_monitor==1?"[CM]":"").
+                \ (s:yr_search==""?"":'[S='.s:yr_search.']').
+                \ '%=Commands:\ <enter>,[g]p,[g]P,1-9,d,r,s,a,c,u,R,q,<space>,?'
+    exec "setlocal statusline=" . status
+endfunction
+
+" YRWindowHelp
 " Displays a brief command list and option settings.
 " It also will toggle the Help text.
-function! s:YRWindowStatus(show_help)
+function! s:YRWindowHelp(show_help)
     let full_help      = 0
     let orig_win_bufnr = bufwinnr('%')
     let yr_win_bufnr   = bufwinnr(s:yr_buffer_id)
@@ -2168,14 +2176,9 @@ function! s:YRWindowStatus(show_help)
         exec yr_win_bufnr . "wincmd w"
     endif
 
-    let msg = 'AutoClose='.g:yankring_window_auto_close.
-                \ ';ClipboardMonitor='.g:yankring_clipboard_monitor.
-                \ ';Inserts='.g:yankring_record_insert.
-                \ ';Cmds:<enter>,[g]p,[g]P,1-9,d,r,s,a,c,i,u,R,q,<space>;Help=?'.
-                \ (s:yr_search==""?"":';SearchRegEx='.s:yr_search)
-
+    let msg = "--- YankRing ---\n"
     if s:yr_has_voperator == 0
-        let msg = msg . "\nYankRing has limited functionality without Vim 7.2 or higher"
+        let msg = "YankRing has limited functionality without Vim 7.2 or higher\n" . msg
     endif
 
     " Toggle help by checking the first line of the buffer
@@ -2209,7 +2212,7 @@ function! s:YRWindowStatus(show_help)
     " Use the blackhole register so it does not affect the yankring
     setlocal modifiable
     exec 0
-    silent! exec 'norm! "_d/^---'."\n"
+    silent! exec 'norm! "_d/^\(Elem\|Reg \)'."\n"
     call histdel("search", -1)
 
     silent! 0put =msg
@@ -2418,7 +2421,8 @@ function! s:YRWindowOpen(results)
     silent! exec '%delete _'
 
     " Display the status line / help
-    call s:YRWindowStatus(0)
+    call s:YRWindowStatus()
+    call s:YRWindowHelp(0)
     exec 'normal! G'
 
     " Display the contents of the yankring
@@ -2557,7 +2561,7 @@ function! s:YRWindowAction(op, cmd_mode) range
         let g:yankring_window_auto_close =
                     \ (g:yankring_window_auto_close == 1?0:1)
         " Display the status line / help
-        call s:YRWindowStatus(0)
+        call s:YRWindowStatus()
         call cursor(l:curr_line,0)
         return
     elseif opcode ==# 'c'
@@ -2566,7 +2570,7 @@ function! s:YRWindowAction(op, cmd_mode) range
         let g:yankring_clipboard_monitor =
                     \ (g:yankring_clipboard_monitor == 1?0:1)
         " Display the status line / help
-        call s:YRWindowStatus(0)
+        call s:YRWindowStatus()
         call cursor(l:curr_line,0)
         return
     elseif opcode ==# 'i'
@@ -2580,7 +2584,7 @@ function! s:YRWindowAction(op, cmd_mode) range
         return
     elseif opcode ==# '?'
         " Display the status line / help
-        call s:YRWindowStatus(1)
+        call s:YRWindowHelp(1)
         return
     endif
 
